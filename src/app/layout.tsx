@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { cn } from '@/lib/utils';
+import { AuthProvider } from '@/hooks/use-auth';
 
 export const metadata: Metadata = {
   title: 'PlatePick',
@@ -24,7 +25,9 @@ export default function RootLayout({
         />
       </head>
       <body className={cn('font-body antialiased', 'min-h-screen bg-background font-sans')}>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

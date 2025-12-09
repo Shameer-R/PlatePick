@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase/config';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +26,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/icons';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 const LoginFormSchema = z.object({
   email: z.string().email('Please enter a valid email address.'),
@@ -32,6 +37,8 @@ const LoginFormSchema = z.object({
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const form = useForm<z.infer<typeof LoginFormSchema>>({
     resolver: zodResolver(LoginFormSchema),
     defaultValues: {
@@ -40,10 +47,20 @@ export default function LoginPage() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof LoginFormSchema>) {
-    // Mock login logic
-    console.log(values);
-    router.push('/dashboard');
+  async function onSubmit(values: z.infer<typeof LoginFormSchema>) {
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -87,7 +104,8 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Login
               </Button>
             </form>

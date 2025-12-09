@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,10 +22,19 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/icons';
-import { LayoutDashboard, User, LogOut, ChevronUp, History } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, ChevronUp, History, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase/config';
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -82,16 +91,20 @@ export function AppSidebar() {
       <SidebarFooter>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="justify-start w-full h-auto px-2 py-2">
+            <Button variant="ghost" className="justify-start w-full h-auto px-2 py-2" disabled={loading}>
               <div className="flex justify-between w-full items-center">
                 <div className="flex gap-2 items-center">
+                  {loading ? (
+                     <Loader2 className="w-8 h-8 animate-spin" />
+                  ) : (
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="https://picsum.photos/seed/user-avatar/40/40" data-ai-hint="person face" />
-                    <AvatarFallback>U</AvatarFallback>
+                    <AvatarImage src={user?.photoURL || ''} data-ai-hint="person face" />
+                    <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                   </Avatar>
+                  )}
                   <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium">User</span>
-                    <span className="text-xs text-muted-foreground">user@example.com</span>
+                    <span className="text-sm font-medium">{user?.displayName || 'User'}</span>
+                    <span className="text-xs text-muted-foreground">{user?.email || ''}</span>
                   </div>
                 </div>
                 <ChevronUp className="w-4 h-4" />
@@ -108,11 +121,9 @@ export function AppSidebar() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </Link>
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

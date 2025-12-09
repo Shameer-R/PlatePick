@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase/config';
+import { doc, setDoc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -24,26 +27,58 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/icons';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 const SignupFormSchema = z.object({
+  name: z.string().min(1, 'Name is required.'),
   email: z.string().email('Please enter a valid email address.'),
   password: z.string().min(8, 'Password must be at least 8 characters long.'),
 });
 
 export default function SignupPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const form = useForm<z.infer<typeof SignupFormSchema>>({
     resolver: zodResolver(SignupFormSchema),
     defaultValues: {
+      name: '',
       email: '',
       password: '',
     },
   });
 
-  function onSubmit(values: z.infer<typeof SignupFormSchema>) {
-    // Mock signup logic
-    console.log(values);
-    router.push('/dashboard');
+  async function onSubmit(values: z.infer<typeof SignupFormSchema>) {
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+      
+      await updateProfile(user, { displayName: values.name });
+
+      // Create a user document in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        name: values.name,
+        email: values.email,
+        createdAt: new Date(),
+        preferences: {
+          dietaryRestrictions: '',
+          cuisinePreferences: '',
+        }
+      });
+
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Sign Up Failed',
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -61,6 +96,19 @@ export default function SignupPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+               <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="email"
@@ -87,7 +135,8 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Account
               </Button>
             </form>

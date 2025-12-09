@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { createMealPlan } from '@/lib/actions';
 import { MealPlanRequestSchema } from '@/lib/definitions';
+import { useAuth } from '@/hooks/use-auth';
 
 interface MealPlanFormProps {
   isLoading: boolean;
@@ -23,6 +24,7 @@ interface MealPlanFormProps {
 
 export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const form = useForm<z.infer<typeof MealPlanRequestSchema>>({
     resolver: zodResolver(MealPlanRequestSchema),
@@ -34,10 +36,20 @@ export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanF
   });
 
   async function onSubmit(values: z.infer<typeof MealPlanRequestSchema>) {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'You must be logged in to create a meal plan.',
+      });
+      return;
+    }
+
     setIsLoading(true);
     setMealPlan(null);
 
-    const result = await createMealPlan(values);
+    const idToken = await user.getIdToken();
+    const result = await createMealPlan({ ...values, idToken });
 
     if (result.error) {
       toast({
@@ -104,7 +116,7 @@ export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanF
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select number of meals" />
-                      </SelectTrigger>
+                      </Trigger>
                     </FormControl>
                     <SelectContent>
                       {[...Array(10)].map((_, i) => (
@@ -119,7 +131,7 @@ export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanF
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || !user}>
               {isLoading ? (
                 <Loader2 className="animate-spin" />
               ) : (
