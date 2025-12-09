@@ -137,7 +137,7 @@ export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanF
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select number of meals" />
-                      </Trigger>
+                      </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {[...Array(10)].map((_, i) => (
