@@ -22,7 +22,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/icons';
-import { LayoutDashboard, User, LogOut, ChevronUp } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, ChevronUp, History } from 'lucide-react';
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -50,6 +50,18 @@ export function AppSidebar() {
               <Link href="/dashboard">
                 <LayoutDashboard />
                 <span>Dashboard</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive('/dashboard/history')}
+              tooltip={{ children: 'History' }}
+            >
+              <Link href="/dashboard/history">
+                <History />
+                <span>History</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

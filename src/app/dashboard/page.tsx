@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { MealPlanForm } from '@/components/meal-plan-form';
 import { MealPlanDisplay } from '@/components/meal-plan-display';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
 
 export default function DashboardPage() {
   const [mealPlan, setMealPlan] = useState<string | null>(null);
@@ -34,7 +37,12 @@ export default function DashboardPage() {
       <Separator />
 
       <div>
-        <h2 className="text-2xl font-headline tracking-tight mb-4">Past Meal Plans</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-headline tracking-tight">Past Meal Plans</h2>
+          <Button variant="ghost" asChild>
+            <Link href="/dashboard/history">View All <ArrowRight className="ml-2" /></Link>
+          </Button>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
            <Card>
             <CardHeader>
