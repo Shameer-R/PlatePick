@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/icons';
 import { LayoutDashboard, User, LogOut, ChevronUp, History, Loader2 } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth.tsx';
 import { auth } from '@/lib/firebase/config';
 
 export function AppSidebar() {

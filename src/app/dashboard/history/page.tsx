@@ -1,25 +1,33 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useAuth } from '@/hooks/use-auth.tsx';
 import { db } from '@/lib/firebase/config';
 import { collection, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { ExternalLink } from 'lucide-react';
+import type { GenerateMealPlanOutput } from '@/ai/flows/generate-meal-plan';
 
-interface MealPlan {
+
+interface MealPlanDocument {
   id: string;
   createdAt: Timestamp;
-  meals: string;
+  meals: GenerateMealPlanOutput['mealPlan'];
   preferencesSnapshot: {
     dietaryRestrictions: string;
     cuisinePreferences: string;
+    numberOfMeals: number;
   };
 }
 
 export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth();
-  const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
+  const [mealPlans, setMealPlans] = useState<MealPlanDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -37,7 +45,7 @@ export default function HistoryPage() {
           orderBy('createdAt', 'desc')
         );
         const querySnapshot = await getDocs(q);
-        const plans = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MealPlan));
+        const plans = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MealPlanDocument));
         setMealPlans(plans);
       } catch (error) {
         console.error("Error fetching meal plans: ", error);
@@ -67,45 +75,70 @@ export default function HistoryPage() {
       </div>
       <div className="space-y-4">
         {isLoading ? (
-          <>
-            <Card>
+          Array.from({ length: 2 }).map((_, i) => (
+            <Card key={i}>
               <CardHeader>
                 <Skeleton className="h-6 w-1/2" />
-                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-3/4 mt-2" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6 mt-2" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full mt-2" />
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <Skeleton className="h-6 w-1/2" />
-                <Skeleton className="h-4 w-3/4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6 mt-2" />
-              </CardContent>
-            </Card>
-          </>
+          ))
         ) : mealPlans.length > 0 ? (
           mealPlans.map((plan) => (
             <Card key={plan.id}>
               <CardHeader>
-                <CardTitle className="text-xl">
+                <CardTitle className="text-xl capitalize">
                   {plan.preferencesSnapshot?.cuisinePreferences || 'Meal Plan'}
                 </CardTitle>
                 <CardDescription>
-                  Generated on {formatDate(plan.createdAt)}
-                  <br />
-                  <span className='capitalize'>
-                  {plan.preferencesSnapshot?.dietaryRestrictions}
-                  </span>
+                  Generated on {formatDate(plan.createdAt)} &bull; {plan.meals.length} meals
+                   &bull; <span className="capitalize">{plan.preferencesSnapshot?.dietaryRestrictions}</span>
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="whitespace-pre-wrap text-sm">{plan.meals.substring(0, 200)}...</p>
+                 <Accordion type="single" collapsible className="w-full">
+                    {plan.meals.map((meal, index) => (
+                      <AccordionItem value={`item-${index}`} key={index}>
+                        <AccordionTrigger className="font-headline text-lg">{meal.name}</AccordionTrigger>
+                        <AccordionContent>
+                          <div className="flex flex-col sm:flex-row gap-6">
+                            {meal.imageUrl && (
+                              <div className="relative w-full sm:w-1/3 aspect-square rounded-md overflow-hidden">
+                                <Image src={meal.imageUrl} alt={meal.name} fill className="object-cover" data-ai-hint="food meal" />
+                              </div>
+                            )}
+                            <div className="flex-1 space-y-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold">Ingredients</h4>
+                                    <ul className="list-disc list-inside text-sm text-muted-foreground">
+                                        {meal.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
+                                    </ul>
+                                </div>
+                                {meal.sourceUrl && (
+                                    <Button variant="outline" size="sm" asChild>
+                                        <a href={meal.sourceUrl} target="_blank" rel="noopener noreferrer">
+                                            View Recipe Source <ExternalLink className="ml-2" />
+                                        </a>
+                                    </Button>
+                                )}
+                            </div>
+                          </div>
+                          <div className="mt-4 space-y-2">
+                            <h4 className="font-semibold">Instructions</h4>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{meal.instructions}</p>
+                          </div>
+                          <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
+                            {meal.calories && <span>Est. Calories: {meal.calories}</span>}
+                            {meal.macros && <span>Macros: {meal.macros}</span>}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
               </CardContent>
             </Card>
           ))

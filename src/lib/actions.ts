@@ -1,12 +1,11 @@
 'use server';
 
-import { generateMealPlan } from '@/ai/flows/generate-meal-plan';
+import { generateMealPlan, GenerateMealPlanOutput } from '@/ai/flows/generate-meal-plan';
 import { MealPlanRequestSchema, type MealPlanRequestWithToken } from '@/lib/definitions';
-import { z } from 'zod';
 
 type MealPlanState = {
   error?: string | null;
-  mealPlan?: string | null;
+  mealPlan?: GenerateMealPlanOutput['mealPlan'] | null;
 };
 
 export async function createMealPlan(data: MealPlanRequestWithToken): Promise<MealPlanState> {
@@ -32,8 +31,9 @@ export async function createMealPlan(data: MealPlanRequestWithToken): Promise<Me
     return { mealPlan: result.mealPlan };
   } catch (error) {
     console.error('Error generating meal plan:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
     return {
-      error: 'An unexpected error occurred while generating your meal plan. Please try again.',
+      error: `An unexpected error occurred while generating your meal plan. Please try again. Details: ${errorMessage}`,
     };
   }
 }

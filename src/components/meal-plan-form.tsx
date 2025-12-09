@@ -14,12 +14,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { createMealPlan } from '@/lib/actions';
 import { MealPlanRequestSchema } from '@/lib/definitions';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth.tsx';
+import type { GenerateMealPlanOutput } from '@/ai/flows/generate-meal-plan';
 
 interface MealPlanFormProps {
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
-  setMealPlan: (plan: string | null) => void;
+  setMealPlan: (plan: GenerateMealPlanOutput['mealPlan'] | null) => void;
 }
 
 export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanFormProps) {
@@ -54,7 +55,7 @@ export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanF
     if (result.error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Error Generating Plan',
         description: result.error,
       });
     } else if (result.mealPlan) {

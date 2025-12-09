@@ -4,13 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { MealPlanForm } from '@/components/meal-plan-form';
 import { MealPlanDisplay } from '@/components/meal-plan-display';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import type { GenerateMealPlanOutput } from '@/ai/flows/generate-meal-plan';
 
 export default function DashboardPage() {
-  const [mealPlan, setMealPlan] = useState<string | null>(null);
+  const [mealPlan, setMealPlan] = useState<GenerateMealPlanOutput['mealPlan'] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   return (
