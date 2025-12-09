@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { MealPlanForm } from '@/components/meal-plan-form';
 import { MealPlanDisplay } from '@/components/meal-plan-display';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import type { GenerateMealPlanOutput } from '@/ai/flows/generate-meal-plan';
 
-export default function DashboardPage() {
+function DashboardComponent() {
   const [mealPlan, setMealPlan] = useState<GenerateMealPlanOutput['mealPlan'] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -65,4 +65,12 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardComponent />
+    </Suspense>
+  )
 }

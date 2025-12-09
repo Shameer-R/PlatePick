@@ -3,30 +3,29 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth.tsx';
 import { db } from '@/lib/firebase/config';
 import { collection, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
 import type { GenerateMealPlanOutput } from '@/ai/flows/generate-meal-plan';
+import type { MealPlanRequest } from '@/lib/definitions';
 
 
 interface MealPlanDocument {
   id: string;
   createdAt: Timestamp;
   meals: GenerateMealPlanOutput['mealPlan'];
-  preferencesSnapshot: {
-    dietaryRestrictions: string;
-    cuisinePreferences: string;
-    numberOfMeals: number;
-  };
+  preferencesSnapshot: MealPlanRequest;
 }
 
 export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [mealPlans, setMealPlans] = useState<MealPlanDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -66,6 +65,15 @@ export default function HistoryPage() {
       day: 'numeric',
     });
   };
+
+  const handleReusePlan = (preferences: MealPlanRequest) => {
+    const params = new URLSearchParams({
+        diet: preferences.dietaryRestrictions,
+        cuisine: preferences.cuisinePreferences,
+        meals: String(preferences.numberOfMeals)
+    });
+    router.push(`/dashboard?${params.toString()}`);
+  }
 
   return (
     <div className="space-y-8">
@@ -140,6 +148,12 @@ export default function HistoryPage() {
                     ))}
                   </Accordion>
               </CardContent>
+               <CardFooter className="border-t pt-4">
+                <Button variant="secondary" size="sm" onClick={() => handleReusePlan(plan.preferencesSnapshot)}>
+                    <RefreshCw className="mr-2" />
+                    Reuse Preferences
+                </Button>
+              </CardFooter>
             </Card>
           ))
         ) : (

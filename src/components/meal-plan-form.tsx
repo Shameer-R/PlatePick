@@ -4,6 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Sparkles } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +28,7 @@ interface MealPlanFormProps {
 export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanFormProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
 
   const form = useForm<z.infer<typeof MealPlanRequestSchema>>({
     resolver: zodResolver(MealPlanRequestSchema),
@@ -35,6 +38,23 @@ export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanF
       numberOfMeals: 5,
     },
   });
+
+  useEffect(() => {
+    const diet = searchParams.get('diet');
+    const cuisine = searchParams.get('cuisine');
+    const meals = searchParams.get('meals');
+
+    if (diet) {
+      form.setValue('dietaryRestrictions', diet);
+    }
+    if (cuisine) {
+      form.setValue('cuisinePreferences', cuisine);
+    }
+    if (meals) {
+      form.setValue('numberOfMeals', Number(meals));
+    }
+  }, [searchParams, form]);
+
 
   async function onSubmit(values: z.infer<typeof MealPlanRequestSchema>) {
     if (!user) {
@@ -113,7 +133,7 @@ export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanF
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Number of Meals</FormLabel>
-                   <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
+                   <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)} defaultValue={String(field.value)}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select number of meals" />
