@@ -8,24 +8,12 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { searchRecipesTool } from '../tools/themealdb';
 
-// -------- Firebase Admin (Server Safe Auth) --------
-import admin from 'firebase-admin';
-
-// In a deployed Google Cloud environment (like App Hosting or Cloud Functions),
-// initializeApp() automatically finds the service account credentials.
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
-const db = admin.firestore();
-const auth = admin.auth();
-
 // -------- Schemas --------
 const GenerateMealPlanInputSchema = z.object({
   dietaryRestrictions: z.string(),
   cuisinePreferences: z.string(),
   numberOfMeals: z.number(),
-  idToken: z.string(), // 🔐 REQUIRED FOR SERVER AUTH
+  idToken: z.string(), // 🔐 REQUIRED FOR SERVER AUTH - but unused for now
 });
 
 export type GenerateMealPlanInput = z.infer<
@@ -102,11 +90,9 @@ const generateMealPlanFlow = ai.defineFlow(
     outputSchema: GenerateMealPlanOutputSchema,
   },
   async (input) => {
-    // 1. Verify user identity using token
-    const decodedToken = await auth.verifyIdToken(input.idToken);
-    const userId = decodedToken.uid;
-
-    // 2. Generate Meal Plan
+    // NOTE: All Firebase Admin logic has been temporarily removed for debugging.
+    
+    // 1. Generate Meal Plan
     const { output } = await prompt(input);
 
     if (!output?.mealPlan) {
@@ -115,34 +101,7 @@ const generateMealPlanFlow = ai.defineFlow(
     
     const mealPlan = output.mealPlan;
 
-    // 3. Get user preferences from uid collection
-    const userDoc = await db.collection('users').doc(userId).get();
-    const preferencesSnapshot = userDoc.exists
-      ? userDoc.data()?.preferences ?? {}
-      : {};
-
-    // 4. Save the entire PLAN to meal_plans collection
-    const planRef = await db.collection('meal_plans').add({
-      userId,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      meals: mealPlan, // Store the array of meal objects
-      preferencesSnapshot,
-    });
-
-    const planId = planRef.id;
-
-    // 5. Save each individual meal to saved_recipes collection
-    for (const meal of mealPlan) {
-      await db.collection('saved_recipes').add({
-        meal, // store the meal object
-        originalPlanId: planId,
-        savedAt: admin.firestore.FieldValue.serverTimestamp(),
-        userId,
-        userNotes: '',
-      });
-    }
-
-    // 6. Return to client
+    // 2. Return to client
     return { mealPlan };
   }
 );
