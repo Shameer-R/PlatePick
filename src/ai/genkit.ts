@@ -7,9 +7,8 @@ export const ai = genkit({
       // Force the use of service account credentials in the deployed environment.
       // This is more robust than relying on an API key for server-side flows.
       authPolicy: 'google',
-      apiVersion: 'v1',
     }),
   ],
-  // Use a stable, versioned model to ensure availability.
-  model: 'googleai/gemini-1.0-pro',
+  // Use the user-requested model.
+  model: 'googleai/gemini-2.5-pro',
 });
