@@ -1,35 +1,8 @@
 'use server';
 
-import { initializeApp, getApps, App } from 'firebase-admin/app';
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
-import { getAuth, Auth } from 'firebase-admin/auth';
-
+import { getFirebaseAdmin } from '@/lib/firebase/admin';
 import { generateMealPlan, GenerateMealPlanOutput } from '@/ai/flows/generate-meal-plan';
 import { MealPlanRequestSchema, type MealPlanRequest } from '@/lib/definitions';
-
-// Use a lazy-initialized holder for Firebase Admin
-let firebaseAdmin: { db: Firestore; auth: Auth } | null = null;
-
-// Helper function to initialize Firebase Admin on first use
-function getFirebaseAdmin() {
-  if (!firebaseAdmin) {
-    try {
-      if (!getApps().length) {
-        initializeApp();
-      }
-      const db = getFirestore();
-      const auth = getAuth();
-      firebaseAdmin = { db, auth };
-    } catch (e: any) {
-      console.error('CRITICAL: Firebase Admin SDK initialization failed.', {
-        errorMessage: e.message,
-        errorStack: e.stack,
-      });
-      throw new Error(`Firebase Admin SDK failed to initialize: ${e.message}`);
-    }
-  }
-  return firebaseAdmin;
-}
 
 
 type MealPlanState = {
