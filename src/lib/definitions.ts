@@ -7,5 +7,3 @@ export const MealPlanRequestSchema = z.object({
 });
 
 export type MealPlanRequest = z.infer<typeof MealPlanRequestSchema>;
-
-export type MealPlanRequestWithToken = MealPlanRequest & { idToken: string };

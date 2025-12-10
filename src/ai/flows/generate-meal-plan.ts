@@ -2,47 +2,18 @@
 
 /**
  * @fileOverview A meal plan generator AI agent that uses TheMealDB for recipes.
+ * This flow ONLY generates the meal plan and does not interact with Firebase.
  */
 
-import { initializeApp, getApps, App } from 'firebase-admin/app';
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
-import { getAuth, Auth } from 'firebase-admin/auth';
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { searchRecipesTool } from '../tools/themealdb';
-
-// Use a lazy-initialized holder for Firebase Admin
-let firebaseAdmin: { db: Firestore; auth: Auth } | null = null;
-
-// Helper function to initialize Firebase Admin on first use
-function getFirebaseAdmin() {
-  if (!firebaseAdmin) {
-    try {
-      if (!getApps().length) {
-        initializeApp();
-      }
-      const db = getFirestore();
-      const auth = getAuth();
-      firebaseAdmin = { db, auth };
-    } catch (e: any) {
-      // If initialization fails, log the specific error and re-throw it.
-      console.error('CRITICAL: Firebase Admin SDK initialization failed.', {
-        errorMessage: e.message,
-        errorStack: e.stack,
-      });
-      throw new Error(`Firebase Admin SDK failed to initialize: ${e.message}`);
-    }
-  }
-  return firebaseAdmin;
-}
-
 
 // -------- Schemas --------
 const GenerateMealPlanInputSchema = z.object({
   dietaryRestrictions: z.string(),
   cuisinePreferences: z.string(),
   numberOfMeals: z.number(),
-  idToken: z.string(),
 });
 
 export type GenerateMealPlanInput = z.infer<
@@ -67,31 +38,10 @@ export type GenerateMealPlanOutput = z.infer<
   typeof GenerateMealPlanOutputSchema
 >;
 
-// -------- Public Function --------
-export async function generateMealPlan(
-  input: GenerateMealPlanInput
-): Promise<GenerateMealPlanOutput> {
-  // This is a wrapper to add detailed error handling.
-  try {
-    return await generateMealPlanFlow(input);
-  } catch (e: any) {
-    console.error('CRITICAL: An unhandled error occurred in generateMealPlanFlow.', {
-      errorMessage: e.message,
-      errorStack: e.stack,
-      errorDetails: e.cause, // Genkit often wraps underlying errors here
-    });
-
-    // Re-throw a more user-friendly error to the client action
-    throw new Error(
-      `AI flow failed. Original error: ${e.message}. Check server logs for full details.`
-    );
-  }
-}
-
 // -------- AI Prompt --------
 const prompt = ai.definePrompt({
   name: 'generateMealPlanPrompt',
-  input: { schema: Omit<z.ZodType<GenerateMealPlanInput>, 'idToken'> },
+  input: { schema: GenerateMealPlanInputSchema },
   output: { schema: GenerateMealPlanOutputSchema },
   tools: [searchRecipesTool],
   prompt: `
@@ -112,54 +62,19 @@ Instructions:
 });
 
 // -------- Main Flow --------
-const generateMealPlanFlow = ai.defineFlow(
+export const generateMealPlan = ai.defineFlow(
   {
     name: 'generateMealPlanFlow',
     inputSchema: GenerateMealPlanInputSchema,
     outputSchema: GenerateMealPlanOutputSchema,
   },
   async (input) => {
-    // 1. Authenticate the user
-    let decodedToken;
-    let userId;
-    try {
-      const { auth } = getFirebaseAdmin(); // Lazy-init Firebase Admin
-      decodedToken = await auth.verifyIdToken(input.idToken);
-      userId = decodedToken.uid;
-    } catch (error: any) {
-      console.error('Authentication or Firebase Admin Init failed:', error);
-      throw new Error(`User authentication failed. Please sign in again. Details: ${error.message}`);
-    }
-    
-    // 2. Generate Meal Plan
     const { output } = await prompt(input);
 
     if (!output?.mealPlan) {
       throw new Error('Meal plan generation failed or returned no meals.');
     }
     
-    const mealPlan = output.mealPlan;
-
-    // 3. Save to Firestore
-    try {
-      const { db } = getFirebaseAdmin(); // Get DB instance
-      await db.collection('meal_plans').add({
-        userId: userId,
-        createdAt: new Date(),
-        meals: mealPlan,
-        preferencesSnapshot: {
-          dietaryRestrictions: input.dietaryRestrictions,
-          cuisinePreferences: input.cuisinePreferences,
-          numberOfMeals: input.numberOfMeals,
-        },
-      });
-    } catch (error) {
-      console.error('Firestore save failed:', error);
-      // We don't throw an error here, as the meal plan was still generated.
-      // The user gets their plan, but we log the save failure.
-    }
-
-    // 4. Return to client
-    return { mealPlan };
+    return { mealPlan: output.mealPlan };
   }
 );
