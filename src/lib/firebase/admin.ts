@@ -1,4 +1,4 @@
-import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { initializeApp, getApps, App, type AppOptions } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getAuth, Auth } from 'firebase-admin/auth';
 import { credential } from 'firebase-admin';
@@ -16,6 +16,9 @@ export function getFirebaseAdmin() {
         const auth = getAuth(app);
         firebaseAdmin = { db, auth, app };
       } else {
+        // This is the most explicit way to initialize.
+        // It forces firebase-admin to use the environment's
+        // built-in service account (Application Default Credentials).
         const app = initializeApp();
         const db = getFirestore(app);
         const auth = getAuth(app);
