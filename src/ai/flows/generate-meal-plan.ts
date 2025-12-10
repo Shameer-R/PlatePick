@@ -11,15 +11,10 @@ import { searchRecipesTool } from '../tools/themealdb';
 // -------- Firebase Admin (Server Safe Auth) --------
 import admin from 'firebase-admin';
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin. In a deployed Google Cloud environment (like App Hosting),
+// it will automatically find the service account credentials.
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.NEXT_PUBLIC_FB_PROJECT_ID,
-      clientEmail: process.env.NEXT_PUBLIC_FB_CLIENT_EMAIL,
-      privateKey: process.env.NEXT_PUBLIC_FB_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+  admin.initializeApp();
 }
 
 const db = admin.firestore();
