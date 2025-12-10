@@ -9,5 +9,5 @@ export const ai = genkit({
       authPolicy: 'google',
     }),
   ],
-  model: 'googleai/gemini-1.5-flash',
+  model: 'googleai/gemini-pro',
 });
