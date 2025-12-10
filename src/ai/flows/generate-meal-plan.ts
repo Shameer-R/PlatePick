@@ -4,7 +4,7 @@
  * @fileOverview A meal plan generator AI agent that uses TheMealDB for recipes.
  */
 
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { ai } from '@/ai/genkit';
