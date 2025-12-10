@@ -4,23 +4,38 @@
  * @fileOverview A meal plan generator AI agent that uses TheMealDB for recipes.
  */
 
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getAuth, Auth } from 'firebase-admin/auth';
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { searchRecipesTool } from '../tools/themealdb';
 
-// Firebase Admin SDK Initialization
-// Initialize only if it hasn't been initialized yet.
-if (!getApps().length) {
-  // When deployed to a Google Cloud environment, the SDK will automatically
-  // use the project's service account credentials.
-  initializeApp();
+// Use a lazy-initialized holder for Firebase Admin
+let firebaseAdmin: { db: Firestore; auth: Auth } | null = null;
+
+// Helper function to initialize Firebase Admin on first use
+function getFirebaseAdmin() {
+  if (!firebaseAdmin) {
+    try {
+      if (!getApps().length) {
+        initializeApp();
+      }
+      const db = getFirestore();
+      const auth = getAuth();
+      firebaseAdmin = { db, auth };
+    } catch (e: any) {
+      // If initialization fails, log the specific error and re-throw it.
+      console.error('CRITICAL: Firebase Admin SDK initialization failed.', {
+        errorMessage: e.message,
+        errorStack: e.stack,
+      });
+      throw new Error(`Firebase Admin SDK failed to initialize: ${e.message}`);
+    }
+  }
+  return firebaseAdmin;
 }
 
-const db = getFirestore();
-const auth = getAuth();
 
 // -------- Schemas --------
 const GenerateMealPlanInputSchema = z.object({
@@ -106,13 +121,15 @@ const generateMealPlanFlow = ai.defineFlow(
   async (input) => {
     // 1. Authenticate the user
     let decodedToken;
+    let userId;
     try {
+      const { auth } = getFirebaseAdmin(); // Lazy-init Firebase Admin
       decodedToken = await auth.verifyIdToken(input.idToken);
-    } catch (error) {
-      console.error('Authentication failed:', error);
-      throw new Error('User authentication failed. Please sign in again.');
+      userId = decodedToken.uid;
+    } catch (error: any) {
+      console.error('Authentication or Firebase Admin Init failed:', error);
+      throw new Error(`User authentication failed. Please sign in again. Details: ${error.message}`);
     }
-    const userId = decodedToken.uid;
     
     // 2. Generate Meal Plan
     const { output } = await prompt(input);
@@ -125,6 +142,7 @@ const generateMealPlanFlow = ai.defineFlow(
 
     // 3. Save to Firestore
     try {
+      const { db } = getFirebaseAdmin(); // Get DB instance
       await db.collection('meal_plans').add({
         userId: userId,
         createdAt: new Date(),
