@@ -13,7 +13,7 @@ const GenerateMealPlanInputSchema = z.object({
   dietaryRestrictions: z.string(),
   cuisinePreferences: z.string(),
   numberOfMeals: z.number(),
-  idToken: z.string(), // 🔐 REQUIRED FOR SERVER AUTH - but unused for now
+  idToken: z.string(), // 🔐 Kept for schema compatibility, but will be unused for this diagnostic test.
 });
 
 export type GenerateMealPlanInput = z.infer<
