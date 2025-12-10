@@ -62,19 +62,14 @@ Instructions:
 });
 
 // -------- Main Flow --------
-export const generateMealPlan = ai.defineFlow(
-  {
-    name: 'generateMealPlanFlow',
-    inputSchema: GenerateMealPlanInputSchema,
-    outputSchema: GenerateMealPlanOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
+export async function generateMealPlan(
+  input: GenerateMealPlanInput
+): Promise<GenerateMealPlanOutput> {
+  const { output } = await prompt(input);
 
-    if (!output?.mealPlan) {
-      throw new Error('Meal plan generation failed or returned no meals.');
-    }
-    
-    return { mealPlan: output.mealPlan };
+  if (!output?.mealPlan) {
+    throw new Error('Meal plan generation failed or returned no meals.');
   }
-);
+
+  return { mealPlan: output.mealPlan };
+}
