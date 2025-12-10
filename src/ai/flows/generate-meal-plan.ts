@@ -54,7 +54,21 @@ export type GenerateMealPlanOutput = z.infer<
 export async function generateMealPlan(
   input: GenerateMealPlanInput
 ): Promise<GenerateMealPlanOutput> {
-  return generateMealPlanFlow(input);
+  // This is a wrapper to add detailed error handling.
+  try {
+    return await generateMealPlanFlow(input);
+  } catch (e: any) {
+    console.error('CRITICAL: An unhandled error occurred in generateMealPlanFlow.', {
+      errorMessage: e.message,
+      errorStack: e.stack,
+      errorDetails: e.cause, // Genkit often wraps underlying errors here
+    });
+
+    // Re-throw a more user-friendly error to the client action
+    throw new Error(
+      `AI flow failed. Original error: ${e.message}. Check server logs for full details.`
+    );
+  }
 }
 
 // -------- AI Prompt --------

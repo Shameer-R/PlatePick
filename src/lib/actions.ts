@@ -30,10 +30,10 @@ export async function createMealPlan(data: MealPlanRequestWithToken): Promise<Me
     const result = await generateMealPlan({ ...validatedFields.data, idToken: data.idToken });
     return { mealPlan: result.mealPlan };
   } catch (error) {
-    console.error('Error generating meal plan:', error);
+    console.error('Error in createMealPlan server action:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
     return {
-      error: `An unexpected error occurred while generating your meal plan. Please try again. Details: ${errorMessage}`,
+      error: `Failed to generate meal plan. Details: ${errorMessage}`,
     };
   }
 }
