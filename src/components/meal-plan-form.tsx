@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { Loader2, Sparkles } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { createMealPlan, saveMealPlan } from '@/lib/actions';
+import { createMealPlan } from '@/lib/actions';
 import { MealPlanRequestSchema, type MealPlanRequest } from '@/lib/definitions';
 import { useAuth } from '@/hooks/use-auth.tsx';
 import type { GenerateMealPlanOutput } from '@/ai/flows/generate-meal-plan';
@@ -56,6 +58,30 @@ export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanF
   }, [searchParams, form]);
 
 
+  const saveMealPlanClientSide = async (
+      mealPlan: GenerateMealPlanOutput['mealPlan'],
+      request: MealPlanRequest,
+      userId: string
+    ) => {
+      try {
+        await addDoc(collection(db, "meal_plans"), {
+          userId: userId,
+          createdAt: new Date(),
+          meals: mealPlan,
+          preferencesSnapshot: request,
+        });
+        // Optional: show a silent success or a subtle notification
+      } catch (error) {
+         console.error("Failed to save meal plan from client:", error);
+         toast({
+            variant: 'destructive',
+            title: 'Save Failed',
+            description: 'Could not save the plan to your history.',
+          });
+      }
+  };
+
+
   async function onSubmit(values: z.infer<typeof MealPlanRequestSchema>) {
     if (!user) {
       toast({
@@ -89,28 +115,8 @@ export function MealPlanForm({ isLoading, setIsLoading, setMealPlan }: MealPlanF
         description: 'Your meal plan has been generated.',
       });
 
-      // Step 2: Save the meal plan in the background
-      try {
-        const idToken = await user.getIdToken();
-        const saveResult = await saveMealPlan({
-          idToken,
-          mealPlan: result.mealPlan,
-          request: values,
-        });
-        if (saveResult.error) {
-           toast({
-            variant: 'destructive',
-            title: 'Save Failed',
-            description: 'Could not save the plan to your history.',
-          });
-        }
-      } catch (e) {
-         toast({
-            variant: 'destructive',
-            title: 'Save Failed',
-            description: 'Could not save the plan to your history.',
-          });
-      }
+      // Step 2: Save the meal plan from the client
+      await saveMealPlanClientSide(result.mealPlan, values, user.uid);
       
       form.reset();
     }
