@@ -4,16 +4,30 @@
  * @fileOverview A meal plan generator AI agent that uses TheMealDB for recipes.
  */
 
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { searchRecipesTool } from '../tools/themealdb';
+
+// Firebase Admin SDK Initialization
+// Initialize only if it hasn't been initialized yet.
+if (!getApps().length) {
+  // When deployed to a Google Cloud environment, the SDK will automatically
+  // use the project's service account credentials.
+  initializeApp();
+}
+
+const db = getFirestore();
+const auth = getAuth();
 
 // -------- Schemas --------
 const GenerateMealPlanInputSchema = z.object({
   dietaryRestrictions: z.string(),
   cuisinePreferences: z.string(),
   numberOfMeals: z.number(),
-  idToken: z.string(), // 🔐 Kept for schema compatibility, but will be unused for this diagnostic test.
+  idToken: z.string(),
 });
 
 export type GenerateMealPlanInput = z.infer<
@@ -62,7 +76,7 @@ export async function generateMealPlan(
 // -------- AI Prompt --------
 const prompt = ai.definePrompt({
   name: 'generateMealPlanPrompt',
-  input: { schema: GenerateMealPlanInputSchema },
+  input: { schema: Omit<z.ZodType<GenerateMealPlanInput>, 'idToken'> },
   output: { schema: GenerateMealPlanOutputSchema },
   tools: [searchRecipesTool],
   prompt: `
@@ -90,9 +104,17 @@ const generateMealPlanFlow = ai.defineFlow(
     outputSchema: GenerateMealPlanOutputSchema,
   },
   async (input) => {
-    // NOTE: All Firebase Admin logic has been temporarily removed for debugging.
+    // 1. Authenticate the user
+    let decodedToken;
+    try {
+      decodedToken = await auth.verifyIdToken(input.idToken);
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      throw new Error('User authentication failed. Please sign in again.');
+    }
+    const userId = decodedToken.uid;
     
-    // 1. Generate Meal Plan
+    // 2. Generate Meal Plan
     const { output } = await prompt(input);
 
     if (!output?.mealPlan) {
@@ -101,7 +123,25 @@ const generateMealPlanFlow = ai.defineFlow(
     
     const mealPlan = output.mealPlan;
 
-    // 2. Return to client
+    // 3. Save to Firestore
+    try {
+      await db.collection('meal_plans').add({
+        userId: userId,
+        createdAt: new Date(),
+        meals: mealPlan,
+        preferencesSnapshot: {
+          dietaryRestrictions: input.dietaryRestrictions,
+          cuisinePreferences: input.cuisinePreferences,
+          numberOfMeals: input.numberOfMeals,
+        },
+      });
+    } catch (error) {
+      console.error('Firestore save failed:', error);
+      // We don't throw an error here, as the meal plan was still generated.
+      // The user gets their plan, but we log the save failure.
+    }
+
+    // 4. Return to client
     return { mealPlan };
   }
 );
